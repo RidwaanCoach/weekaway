@@ -1,0 +1,93 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// role: BUYER | AGENT | ADMIN
+// agentStatus (agents only): PENDING | APPROVED | SUSPENDED
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  phone        String?
+  role         String    @default("BUYER")
+  agencyName   String?
+  agentStatus  String?
+  bio          String?
+  createdAt    DateTime  @default(now())
+  listings     Listing[]
+  enquiries    Enquiry[] @relation("BuyerEnquiries")
+  reviews      Review[]  @relation("AgentReviews")
+}
+
+// category: BEACH | BUSH | MOUNTAIN
+model Resort {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  town        String
+  province    String
+  category    String
+  description String
+  amenities   String
+  featured    Boolean   @default(false)
+  listings    Listing[]
+}
+
+// status: LIVE | SOLD | EXPIRED | REMOVED
+model Listing {
+  id        String    @id @default(cuid())
+  resort    Resort    @relation(fields: [resortId], references: [id])
+  resortId  String
+  agent     User      @relation(fields: [agentId], references: [id])
+  agentId   String
+  checkIn   DateTime
+  nights    Int       @default(7)
+  unitType  String
+  sleeps    Int
+  priceZar  Int
+  status    String    @default("LIVE")
+  notes     String?
+  views     Int       @default(0)
+  createdAt DateTime  @default(now())
+  enquiries Enquiry[]
+
+  @@index([resortId, status])
+  @@index([agentId])
+}
+
+// status: NEW | REPLIED | CLOSED
+model Enquiry {
+  id         String   @id @default(cuid())
+  listing    Listing  @relation(fields: [listingId], references: [id])
+  listingId  String
+  buyer      User?    @relation("BuyerEnquiries", fields: [buyerId], references: [id])
+  buyerId    String?
+  guestName  String
+  guestEmail String
+  guestPhone String?
+  message    String
+  status     String   @default("NEW")
+  reply      String?
+  createdAt  DateTime @default(now())
+
+  @@index([listingId])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  agent      User     @relation("AgentReviews", fields: [agentId], references: [id])
+  agentId    String
+  authorName String
+  rating     Int
+  comment    String
+  createdAt  DateTime @default(now())
+
+  @@index([agentId])
+}
